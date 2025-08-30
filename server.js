@@ -4,7 +4,6 @@ const express =require('express');  //“Import the Express library into my proj
 //“Store that function in a variable named express.”
 
 
-
 //require('express') returns a function (the Express function).
 //You save that function in a variable named express.
 //Then you call that function with express().
@@ -22,6 +21,8 @@ const db=require('./db');   // this will ensure thtat db.js is loaded
 //we save the exported value of db.js into a variable called db
 //this will ensure that the code in db.js is executed and the database connection is established when we run server.js
 
+
+require('dotenv').config();
 
 // body-parser is a middleware that helps to parse the incoming request body
 // it read the request body (data sent by client) and convert it into a usable object (req.body).
@@ -46,6 +47,11 @@ app.use(bodyParser.json());
 // Literal meaning:
 // Load the body-parser package. Tell Express to use its json() middleware so that any JSON sent in requests will be automatically converted into a JavaScript object and stored in req.body.
 
+
+
+const PORT = process.env.PORT || 3000;
+
+
 app.get('/', (req, res) => {
   res.send('Hello welcome to my hotel!!!')
 })
@@ -53,13 +59,17 @@ app.get('/', (req, res) => {
 
 
 // imports the router files
-const personRoutes = require('./routes/personRoutes');
+const personRoutes = require('./routes/personRoutes');//“For any request that starts with /person, forward it to the personRoutes router.”
 app.use('/person',personRoutes);
 
 const menuItemRoutes = require('./routes/menuItemRoutes');
 app.use('/menuItem',menuItemRoutes);
 
-app.listen(3000,()=>{  //Start the server and wait for incoming requests on port 3000.    
+
+
+
+
+app.listen(PORT,()=>{  //Start the server and wait for incoming requests on port 3000.    
 //Create an HTTP server using this Express app.”
 // “Make it listen on port 3000 of your machine.”
 // When the server successfully starts, run the callback and print the message.”
