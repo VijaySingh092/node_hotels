@@ -24,6 +24,10 @@ const db=require('./db');   // this will ensure thtat db.js is loaded
 
 require('dotenv').config();
 
+
+const passport = require('./auth');//executes auth.js and gets its exported value.
+//const passport = ... → stores the configured Passport instance so you can use it in your Express app.
+
 // body-parser is a middleware that helps to parse the incoming request body
 // it read the request body (data sent by client) and convert it into a usable object (req.body).
 
@@ -52,7 +56,35 @@ app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;
 
 
-app.get('/', (req, res) => {
+
+// Middleware function
+const logRequest =(req,res,next)=>{
+  console.log(`[${new Date().toLocaleString()}] Request Made to : ${req.originalUrl}`);
+  next();
+}
+app.use(logRequest);
+
+
+
+//passport.initialize() is a middleware provided by Passport.
+//Prepares Passport to handle authentication.
+//Adds some properties to req (like req.login(), req.logout(), req.user if sessions are used).
+//app.use() tells Express to run this middleware on every request.
+app.use(passport.initialize());
+
+// What this middleware does:
+// When attached to a route (e.g., app.post('/login', localAuthMiddleware)):
+// Passport reads the request body for username and password (or the field names you configured).
+// Calls your LocalStrategy verify callback (the function you wrote in auth.js).
+// If authentication succeeds:
+// By default, it would attach the user to req.user (but if session: false, it’s only available in that request).
+// If authentication fails:
+//It sends a 401 Unauthorized response by default (unless you override it with a custom callback).
+
+const localAuthMiddleWare= passport.authenticate('local',{session:false})// local tells passport to use LocalStrategy that we define in auth.js
+
+
+app.get('/',function(req, res)  {
   res.send('Hello welcome to my hotel!!!')
 })
 
@@ -60,7 +92,9 @@ app.get('/', (req, res) => {
 
 // imports the router files
 const personRoutes = require('./routes/personRoutes');//“For any request that starts with /person, forward it to the personRoutes router.”
-app.use('/person',personRoutes);
+app.use('/person',personRoutes);// /person - base URL path prefix for all routes in personRoutes   //localAuthMiddleWare  -Protects all routes; requires valid authentication    //personRoutes -Router with the actual endpoints that will run if authentication succeeds
+//All /person/... routes are authenticated using Passport’s local strategy. Without valid credentials, a request cannot access these routes.
+
 
 const menuItemRoutes = require('./routes/menuItemRoutes');
 app.use('/menuItem',menuItemRoutes);

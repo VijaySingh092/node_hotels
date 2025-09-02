@@ -3,7 +3,7 @@ const mongoose = require('mongoose');  // imports the Mongoose library into the 
 require('dotenv').config(); 
 
 // define the mongoDB connection url
-//const mongoURL = 'mongodb://127.0.0.1:27017/hotels';     // when we connect to mongoDb server using mongosh there appears a the url like this and hotels is the name of the database we are using //local url for local database
+//const mongoURL = process.env.MONGODB_URL_LOCAL;     // when we connect to mongoDb server using mongosh there appears a the url like this and hotels is the name of the database we are using //local url for local database
 const mongoURL =process.env.MONGODB_URL;  // for online database clustor
 // set up MongoDb connection
 // it is a function that we call to tell mongoose to connect to a MongoDb server

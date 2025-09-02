@@ -5,6 +5,8 @@ const Person = require('./../models/person');
 // Go to the models folder, open the person.js file, and run it.
 //Whatever that file exports using module.exports = ... will be returned.
 
+const  {jwtAuthMiddleware, generateToken}= require('./../jwt'); // imports the jwtAuthMiddleware (for verifying tokens) and generateToken (for creating tokens) from your jwt.js file so you can use them inside this file.
+
 
 // POST route to add a person
 
@@ -18,7 +20,7 @@ const Person = require('./../models/person');
 // .get → HTTP method (GET request).
 // '/person' → path (part of the URL).
 // (req, res) => { ... } → handler function (what to do when someone visits that route).
- router.post('/',async(req,res)=>{
+ router.post('/signup',async(req,res)=>{
 try{
         const data = req.body  // Assuming the request body contains the person data
         //req.body contains the data that the client sent in the body of the request (usually in a POST or PUT request)
@@ -40,7 +42,20 @@ try{
     // literal meaning : wait until MongoDB finishes saving the newperson document and store the saved version (with _is and other database fields) inside the variable response
 
     console.log('data saved');
-    res.status(200).json(response);
+
+    const payload ={  // just a normal js object
+        id: response.id,
+        username:response.username
+    }
+console.log(JSON.stringify(payload));  // turns object into a string for for cleaner, consistent logging
+    const token=generateToken(payload);//Calls your generateToken function (which internally uses jwt.sign).//The payload is embedded inside the token.The token is signed with your JWT_SECRET and has an expiry (3000 seconds in your setup).
+    console.log("Token is :",token); // prints the newly created JWT to your terminal
+
+
+
+    //this line is sending the final response back to the client
+    //This line tells the client:Your request succeeded (200). Here’s your user info (response) and here’s your login token (token). Use this token in the Authorization header for future requests.
+    res.status(200).json({response:response,token:token});
     // we use res to send something back to whoever made the request (Postman, browser, frontend app etc)
     // 200 is the HTTP status code - it means "ok, request was successful"
     //.json() converts our js object into JSON format and sends it back in the response
@@ -52,8 +67,64 @@ res.status(500).json({error:'Internal server error'});
 } // this sends an http response back to the client .it tells the client Status code500 - the server had a problem and Json - a simple safe message
 })
 
+
+
+
+//login route
+router.post('/login',async(req,res)=>{
+    try{
+        //exact username and password from request body
+        const {username,password} =req.body;
+
+        // find the user by username in MOngoDB
+        const user = await Person.findOne({username:username});
+
+        // if user does not exist or password does not match,return error
+        if(!user|| !(await user.comparePassword(password))){
+            return res.status(401).json({error: 'Invalid username or password'});
+        }
+
+        //create JWT payload. prepare the data you want to embed in the JWT token. This payload will later be availabe inside req.user when token is verified 
+        const payload={ 
+            id: user.id,
+            username :user.username
+        }
+        const token= generateToken(payload);  // this is the moment our server actually creates the JWT token  // payload is the object we created earlier // generateToken(payload) calls the helper function(which is in jwt file)
+
+        //return token as response
+        res.json({token})
+    }catch(err){
+        console.error(err);
+        res.status(500).json({error:'Internal server error'});
+    }
+});
+
+
+
+
+// profile route
+
+router.get('/profile',jwtAuthMiddleware,async (req,res)=>{  // the middleware jwtAuthMiddleware checks if the request has a valid JWT in the Authorization header
+//This middleware checks if the request has a valid JWT in the Authorization header.//If the token is valid → it attaches the decoded payload to req.user.//If not valid → request gets blocked with a 401 Unauthorized.
+
+    try{
+        const userData = req.user; //req.user is set by your middleware: req.user = decoded;
+        console.log("User Data:",userData);
+
+        const userId = userData.id; //Picks the id from the payload so you can look up the actual user in MongoDB.
+        const user = await Person.findById(userId);//Queries MongoDB to get the full user document using the ID.This ensures you get the latest data (not just what’s in the token).
+
+        res.status(200).json({user});//Returns the user’s full profile data as JSON.
+    }catch(err){
+        console.error(err);
+        res.status(500).json({error:'Internal server error'});
+    }
+})
+
+
+
 // get method to get the person details
-router.get('/',async(req,res)=>{
+router.get('/',jwtAuthMiddleware,async(req,res)=>{
     try{
 const data = await Person.find();    //Person.find()=Person collection me jitne bhi documents hai wo mil jaye
 console.log('data fetched');
